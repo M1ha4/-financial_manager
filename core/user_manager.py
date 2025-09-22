@@ -14,19 +14,33 @@ def load_users_from_file(file_path: str):
                 line = line.strip()
                 if line:
                     parts = line.split(',')
-                    if len(parts) == 3:  # имя, возраст, баланс
-                        name, age, balance = parts
-                        users.append([name, age, balance])
+                    # Если есть расходы, их тоже загружаем
+                    if len(parts) >= 3:
+                        name = parts[0]
+                        age = parts[1]
+                        balance = parts[2]
+                        expenses = {}
+                        if len(parts) > 3:
+                            # Расходы: категория:сумма
+                            for exp in parts[3:]:
+                                cat, val = exp.split(':')
+                                expenses[cat] = int(val)
+                        users.append([name, age, balance, expenses])
     except Exception as e:
         print(f"Ошибка при чтении файла: {e}")
 
     return users
 
 
-def save_user_to_file(file_path: str, name: str, age: str, balance: str):
+def save_user_to_file(file_path: str, name: str, age: str, balance: str, expenses: dict = None):
     """Сохранение пользователя в файл"""
     try:
         with open(file_path, 'a', encoding='utf-8') as f:
-            f.write(f"{name},{age},{balance}\n")
+            line = f"{name},{age},{balance}"
+            if expenses:
+                for cat, val in expenses.items():
+                    line += f",{cat}:{val}"
+            line += "\n"
+            f.write(line)
     except Exception as e:
         print(f"Ошибка при записи в файл: {e}")

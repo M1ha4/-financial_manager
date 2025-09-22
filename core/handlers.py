@@ -116,6 +116,14 @@ def register_handlers(bot, all_users, data_file):
 
             summary += f"\n💸 Общие расходы: {total_expenses} руб."
 
+            user_manager.save_user_to_file(
+                data_file,
+                user_data[user_id]["name"],
+                user_data[user_id]["age"],
+                str(balance),
+                user_data[user_id]["expenses"]
+            )
+
             bot.send_message(
                 message.chat.id,
                 "✅ Сбор данных завершён!\n\n"
