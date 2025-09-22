@@ -5,13 +5,19 @@ from core.plot_utils import plot_expenses
 
 # Убедимся, что папка data существует
 os.makedirs("data", exist_ok=True)
-#from core.diagrams import plot_expenses
-
 
 # В памяти
-user_data = {}  # {user_id: {name, age, balance, income, expenses: {категория: сумма}}}
+user_data = {}  # {user_id: {name, age, balance, income, expenses: {категория: сумма}, goals: []}}
 
 CATEGORIES = ["Еда", "Квартира", "Развлечения", "Транспорт", "Инвестиции", "Другое"]
+
+GOALS = {
+    "goal_save": "Накопить",
+    "goal_optimize": "Оптимизировать траты",
+    "goal_advice": "Получать советы от Финансового помощника",
+    "goal_other": "Другое"
+}
+
 
 def register_handlers(bot, all_users, data_file):
 
@@ -23,7 +29,8 @@ def register_handlers(bot, all_users, data_file):
             "age": "",
             "balance": "",
             "income": "",
-            "expenses": {}
+            "expenses": {},
+            "goals": []
         }
 
         bot.send_message(message.chat.id, "Привет! Как тебя зовут?")
@@ -66,8 +73,8 @@ def register_handlers(bot, all_users, data_file):
             return
 
         balance = int(message.text)
-        if balance <= 0:
-            msg = bot.reply_to(message, 'Баланс должен быть больше нуля.')
+        if balance < 0:
+            msg = bot.reply_to(message, 'Баланс должен быть не меньше нуля.')
             bot.register_next_step_handler(msg, get_balance)
             return
 
@@ -140,4 +147,64 @@ def register_handlers(bot, all_users, data_file):
                 )
             )
 
+            # После расходов → спрашиваем цели
+            ask_goals(message)
 
+    def ask_goals(message):
+        user_id = message.from_user.id
+        user_data[user_id]["goals"] = []
+
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for key, val in GOALS.items():
+            markup.add(types.InlineKeyboardButton(val, callback_data=key))
+        markup.add(types.InlineKeyboardButton("✅ Готово", callback_data="goal_done"))
+
+        bot.send_message(
+            message.chat.id,
+            "🎯 Теперь выберите основные цели использования бота (можно несколько):",
+            reply_markup=markup
+        )
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("goal_"))
+    def callback_goals(call):
+        user_id = call.from_user.id
+        goals = user_data[user_id].get("goals", [])
+
+        if call.data == "goal_done":
+            user_manager.save_user_to_file(
+                data_file,
+                user_data[user_id]["name"],
+                user_data[user_id]["age"],
+                user_data[user_id]["balance"],
+                user_data[user_id]["income"],
+                user_data[user_id]["expenses"],
+                sum(user_data[user_id]["expenses"].values()),
+                goals
+            )
+            bot.edit_message_text(
+                f"🎯 Ваши цели сохранены: {', '.join(goals) if goals else 'не выбрано'}",
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id
+            )
+            return
+
+        goal = GOALS[call.data]
+        if goal in goals:
+            goals.remove(goal)
+        else:
+            goals.append(goal)
+
+        user_data[user_id]["goals"] = goals
+
+        # Перерисовываем кнопки с галочками
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for key, val in GOALS.items():
+            text = f"✅ {val}" if val in goals else val
+            markup.add(types.InlineKeyboardButton(text, callback_data=key))
+        markup.add(types.InlineKeyboardButton("✅ Готово", callback_data="goal_done"))
+
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            reply_markup=markup
+        )

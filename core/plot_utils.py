@@ -23,8 +23,8 @@ def plot_expenses(user_data, user_id):
     plt.text(0, -1.2, f"Суммарные расходы: {total} руб.", ha='center', fontsize=12)
 
     # Создаём папку data, если её нет
-    os.makedirs("data", exist_ok=True)
-    img_path = f"data/expenses_{user_id}.png"
+    os.makedirs("data/diagrams_rigistration", exist_ok=True)
+    img_path = f"data/diagrams_rigistration/expenses_{user_id}.png"
     plt.savefig(img_path, bbox_inches='tight')
     plt.close()
     return img_path
