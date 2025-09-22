@@ -1,5 +1,14 @@
+import os
 from telebot import types
 from core import user_manager
+import matplotlib
+matplotlib.use('Agg')  # Используем бэкенд для файлов, без GUI
+import matplotlib.pyplot as plt
+
+# Убедимся, что папка data существует
+os.makedirs("data", exist_ok=True)
+#from core.diagrams import plot_expenses
+
 
 # В памяти
 user_data = {}  # {user_id: {name, age, balance, income, expenses: {категория: сумма}}}
@@ -107,12 +116,6 @@ def register_handlers(bot, all_users, data_file):
             balance = user_data[user_id]["balance"]
             income = user_data[user_id]["income"]
 
-            summary = "📊 Ваши расходы:\n"
-            for cat, val in user_data[user_id]["expenses"].items():
-                summary += f"- {cat}: {val} руб.\n"
-            summary += f"\n💸 Общие расходы: {total_expenses} руб."
-            summary += f"\n💰 Остаток после расходов: {income - total_expenses} руб."
-
             # Сохраняем все данные с расходами и общей суммой расходов
             user_manager.save_user_to_file(
                 data_file,
@@ -124,12 +127,40 @@ def register_handlers(bot, all_users, data_file):
                 total_expenses
             )
 
-            bot.send_message(
+            # Генерация круговой диаграммы
+            img_path = plot_expenses(user_id)
+
+            # Отправка диаграммы пользователю
+            bot.send_photo(
                 message.chat.id,
-                "✅ Сбор данных завершён!\n\n"
-                f"Имя: {user_data[user_id]['name']}\n"
-                f"Возраст: {user_data[user_id]['age']}\n"
-                f"Доход: {income} руб.\n"
-                f"Баланс: {balance} руб.\n\n"
-                f"{summary}"
+                photo=open(img_path, 'rb'),
+                caption=(
+                    "✅ Сбор данных завершён!\n\n"
+                    f"Имя: {user_data[user_id]['name']}\n"
+                    f"Возраст: {user_data[user_id]['age']}\n"
+                    f"Доход: {income} руб.\n"
+                    f"Баланс: {balance} руб.\n"
+                    f"Суммарные расходы: {total_expenses} руб."
+                )
             )
+
+
+def plot_expenses(user_id):
+    """Создаёт круговую диаграмму расходов и возвращает путь к файлу"""
+    expenses = user_data[user_id]["expenses"]
+    labels = list(expenses.keys())
+    values = list(expenses.values())
+
+    plt.figure(figsize=(6, 6))
+    plt.pie(values, labels=labels, autopct='%1.1f%%', startangle=140)
+    plt.title("Примерные месячные расходы")
+
+    # Добавляем суммарные расходы внизу диаграммы
+    total = sum(values)
+    plt.text(0, -1.2, f"Суммарные расходы: {total} руб.", ha='center', fontsize=12)
+
+    # Сохраняем изображение
+    file_path = f"data/expenses_{user_id}.png"
+    plt.savefig(file_path, bbox_inches='tight')
+    plt.close()
+    return file_path
