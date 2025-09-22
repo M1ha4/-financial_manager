@@ -1,9 +1,7 @@
 import os
 from telebot import types
 from core import user_manager
-import matplotlib
-matplotlib.use('Agg')  # Используем бэкенд для файлов, без GUI
-import matplotlib.pyplot as plt
+from core.plot_utils import plot_expenses
 
 # Убедимся, что папка data существует
 os.makedirs("data", exist_ok=True)
@@ -128,9 +126,7 @@ def register_handlers(bot, all_users, data_file):
             )
 
             # Генерация круговой диаграммы
-            img_path = plot_expenses(user_id)
-
-            # Отправка диаграммы пользователю
+            img_path = plot_expenses(user_data, user_id)
             bot.send_photo(
                 message.chat.id,
                 photo=open(img_path, 'rb'),
@@ -138,29 +134,10 @@ def register_handlers(bot, all_users, data_file):
                     "✅ Сбор данных завершён!\n\n"
                     f"Имя: {user_data[user_id]['name']}\n"
                     f"Возраст: {user_data[user_id]['age']}\n"
-                    f"Доход: {income} руб.\n"
-                    f"Баланс: {balance} руб.\n"
-                    f"Суммарные расходы: {total_expenses} руб."
+                    f"Доход: {user_data[user_id]['income']} руб.\n"
+                    f"Баланс: {user_data[user_id]['balance']} руб.\n"
+                    f"Суммарные расходы: {sum(user_data[user_id]['expenses'].values())} руб."
                 )
             )
 
 
-def plot_expenses(user_id):
-    """Создаёт круговую диаграмму расходов и возвращает путь к файлу"""
-    expenses = user_data[user_id]["expenses"]
-    labels = list(expenses.keys())
-    values = list(expenses.values())
-
-    plt.figure(figsize=(6, 6))
-    plt.pie(values, labels=labels, autopct='%1.1f%%', startangle=140)
-    plt.title("Примерные месячные расходы")
-
-    # Добавляем суммарные расходы внизу диаграммы
-    total = sum(values)
-    plt.text(0, -1.2, f"Суммарные расходы: {total} руб.", ha='center', fontsize=12)
-
-    # Сохраняем изображение
-    file_path = f"data/expenses_{user_id}.png"
-    plt.savefig(file_path, bbox_inches='tight')
-    plt.close()
-    return file_path
