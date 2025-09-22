@@ -1,7 +1,11 @@
 import telebot
+import os
 from config import DATA_FILE
 from my_token import token
 from core import handlers, user_manager
+
+DATA_FILE = os.path.join("data", "users.txt")
+all_users = user_manager.load_users_from_file(DATA_FILE)
 
 # Инициализация бота
 bot = telebot.TeleBot(token)
