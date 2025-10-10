@@ -238,8 +238,30 @@ def register_handlers(bot, all_users, data_file):
 
 
 def show_main_menu(bot, chat_id, user_id):
+    """Отображает главное меню с балансом"""
     balance = user_data[user_id].get("balance", 0)
+
+    # Создаем разметку кнопок
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("➕ Доход", "➖ Расход")
-    markup.add("📊 Статистика", "💸 Долги")
-    bot.send_message(chat_id, f"💰 Баланс: {balance} руб.", reply_markup=markup)
+
+    # Верхняя строка: баланс (только отображение, кнопкой не является)
+    markup.add(types.KeyboardButton(f"💰 Баланс: {balance} руб.", request_contact=False))
+
+    # Вторая строка: доход и расход
+    markup.add(
+        types.KeyboardButton("➕ Доход"),
+        types.KeyboardButton("➖ Расход")
+    )
+
+    # Третья строка: статистика и долги
+    markup.add(
+        types.KeyboardButton("📊 Статистика"),
+        types.KeyboardButton("💸 Долги")
+    )
+
+    bot.send_message(
+        chat_id,
+        f"Ваш текущий баланс: {balance} руб.",
+        reply_markup=markup
+    )
+
